@@ -198,6 +198,75 @@ public class FactoriesSupplier implements Supplier<List<Factory>> {
                 .build();
     }
 
+    private Factory hintedHandoffManagerMetricFactory(final FactoryBuilder.CollectorConstructor collectorConstructor, final String jmxName, final String familyNameSuffix, final String help){
+        final ObjectName objectNamePattern = format("org.apache.cassandra.metrics:type=HintedHandOffManager,name=%s", jmxName);
+        final String metricFamilyName = String.format("hinted_handoff_manager_%s", familyNameSuffix);
+
+        return new FactoryBuilder(collectorConstructor, objectNamePattern, metricFamilyName)
+                .withHelp(help)
+                .withLabelMaker(keyPropertyList -> {
+
+                    final String name = keyPropertyList.get("name");
+                    final Pattern namePattern = Pattern.compile("Hints_(?<operation>.*?)(-(?<peerIP>.*))?");
+                    final Matcher matcher = namePattern.matcher(name);
+
+                    if (!matcher.matches())
+                        throw new IllegalStateException();
+
+                    final ImmutableMap.Builder<String, String> labelsBuilder = ImmutableMap.builder();
+
+                    labelsBuilder.put("operation", matcher.group("operation").toLowerCase());
+
+                    {
+                        final String peerIP = matcher.group("peerIP");
+                        if(peerIP != null) {
+                            labelsBuilder.put("peerIP", peerIP);
+                        }
+                    }
+
+                    return labelsBuilder.build();
+                })
+                .build();
+    }
+
+    private Factory hintsServiceMetricFactory(final FactoryBuilder.CollectorConstructor collectorConstructor, final String jmxName, final String familyNameSuffix, final String help){
+        final ObjectName objectNamePattern = format("org.apache.cassandra.metrics:type=HintsService,name=%s", jmxName);
+        final String metricFamilyName = String.format("hints_service_%s", familyNameSuffix);
+
+/*      Test and Enable after Cassandra 4.0 CASSANDRA-13234
+        if(jmxName.contains("-")){
+            return new FactoryBuilder(collectorConstructor, objectNamePattern, metricFamilyName)
+                    .withHelp(help)
+                    .withLabelMaker(keyPropertyList -> {
+
+                        final ImmutableMap.Builder<String, String> labelsBuilder = ImmutableMap.builder();
+                        final String name = keyPropertyList.get("name");
+
+                            final Pattern namePattern = Pattern.compile("Hints_(?<operation>.*?)(-(?<peerIP>.*))?");
+                            final Matcher matcher = namePattern.matcher(name);
+
+                            if (!matcher.matches())
+                                throw new IllegalStateException();
+
+                            labelsBuilder.put("operation", matcher.group("operation").toLowerCase());
+
+                            {
+                                final String peerIP = matcher.group("peerIP");
+                                if(peerIP != null) {
+                                    labelsBuilder.put("peerIP", peerIP);
+                                }
+                            }
+                        return labelsBuilder.build();
+                    })
+                    .build();
+        } else {*/
+            return new FactoryBuilder(collectorConstructor, objectNamePattern, metricFamilyName)
+                    .withHelp(help)
+                    .build();
+       /* }*/
+
+    }
+
     private Factory commitLogMetricFactory(final FactoryBuilder.CollectorConstructor collectorConstructor, final String jmxName, final String familyNameSuffix, final String help) {
         final ObjectName objectNamePattern = format("org.apache.cassandra.metrics:type=CommitLog,name=%s", jmxName);
         final String metricFamilyName = String.format("commit_log_%s", familyNameSuffix);
@@ -686,6 +755,21 @@ public class FactoriesSupplier implements Supplier<List<Factory>> {
             builder.add(threadPoolMetric(functionalCollectorConstructor(numericGaugeAsGauge()), "MaxPoolSize", "maximum_tasks", null));
         }
 
+        // org.apache.cassandra.metrics.HintsService
+        {
+            builder.add(hintsServiceMetricFactory(functionalCollectorConstructor(meterAsCounter()),"HintsSucceeded","hints_succeeded",null));
+            builder.add(hintsServiceMetricFactory(functionalCollectorConstructor(meterAsCounter()),"HintsFailed","hints_failed",null));
+            builder.add(hintsServiceMetricFactory(functionalCollectorConstructor(meterAsCounter()),"HintsTimedOut","hints_timed_out",null));
+//          Test and Enable after Cassandra 4.0 CASSANDRA-13234
+//            builder.add(hintsServiceMetricFactory(histogramAsSummaryCollectorConstructor(),"Hints_delays","hints_delays",null));
+//            builder.add(hintsServiceMetricFactory(histogramAsSummaryCollectorConstructor(),"Hints_delays-*","hints_delays_for_peer",null));
+        }
+
+        // org.apache.cassandra.metrics:type=HintedHandOffManager
+        {
+            builder.add(hintedHandoffManagerMetricFactory(functionalCollectorConstructor(counterAsCounter()),"Hints_created-*","hints_created_for_peer",null));
+            builder.add(hintedHandoffManagerMetricFactory(functionalCollectorConstructor(counterAsCounter()),"Hints_not_stored-*","hints_not_stored_for_peer",null));
+        }
 
         return builder.build();
     }
