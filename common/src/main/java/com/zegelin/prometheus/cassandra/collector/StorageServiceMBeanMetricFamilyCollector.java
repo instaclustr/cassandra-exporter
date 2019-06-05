@@ -88,7 +88,7 @@ public class StorageServiceMBeanMetricFamilyCollector extends MBeanGroupMetricFa
                         .map(e -> new NumericMetric(metadataFactory.endpointLabels(e.endpoint), e.ownership));
 
                 metricFamilyStreamBuilder.add(new GaugeMetricFamily("cassandra_token_ownership_ratio", null, ownershipMetricStream));
-            } catch (Throwable ex) {
+            } catch (final Throwable ex) {
                 logger.warn("Failed to get token ownership: {}", ex.getMessage());
             }
         }
