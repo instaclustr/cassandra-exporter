@@ -10,6 +10,7 @@ import com.zegelin.prometheus.domain.CounterMetricFamily;
 import com.zegelin.prometheus.domain.Labels;
 import com.zegelin.prometheus.domain.MetricFamily;
 import com.zegelin.prometheus.domain.NumericMetric;
+import org.apache.cassandra.locator.InetAddressAndPort;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -277,14 +278,14 @@ public abstract class Harvester {
     }
 
     public Labels globalLabels() {
-        final InetAddress localBroadcastAddress = metadataFactory.localBroadcastAddress();
+        final InetAddressAndPort localBroadcastAddress = metadataFactory.localBroadcastAddress();
         final MetadataFactory.EndpointMetadata localMetadata = metadataFactory.endpointMetadata(localBroadcastAddress)
                 .orElseThrow(() -> new IllegalStateException("Unable to get metadata about the local node."));
 
         final ImmutableMap.Builder<String, String> mapBuilder = ImmutableMap.builder();
 
         LabelEnum.addIfEnabled(GlobalLabel.CLUSTER, enabledGlobalLabels, mapBuilder, metadataFactory::clusterName);
-        LabelEnum.addIfEnabled(GlobalLabel.NODE, enabledGlobalLabels, mapBuilder, () -> InetAddresses.toAddrString(localBroadcastAddress));
+        LabelEnum.addIfEnabled(GlobalLabel.NODE, enabledGlobalLabels, mapBuilder, localBroadcastAddress::toString);
         LabelEnum.addIfEnabled(GlobalLabel.DATACENTER, enabledGlobalLabels, mapBuilder, localMetadata::dataCenter);
         LabelEnum.addIfEnabled(GlobalLabel.RACK, enabledGlobalLabels, mapBuilder, localMetadata::rack);
 

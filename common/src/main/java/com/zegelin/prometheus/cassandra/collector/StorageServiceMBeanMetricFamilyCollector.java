@@ -79,9 +79,9 @@ public class StorageServiceMBeanMetricFamilyCollector extends MBeanGroupMetricFa
         final Stream.Builder<MetricFamily> metricFamilyStreamBuilder = Stream.builder();
 
         {
-            final Stream<NumericMetric> ownershipMetricStream = storageServiceMBean.getOwnership().entrySet().stream()
+            final Stream<NumericMetric> ownershipMetricStream = storageServiceMBean.getOwnershipWithPort().entrySet().stream()
                     .map(e -> new Object() {
-                        final InetAddress endpoint = e.getKey();
+                        final String endpoint = e.getKey();
                         final float ownership = e.getValue();
                     })
                     .map(e -> new NumericMetric(metadataFactory.endpointLabels(e.endpoint), e.ownership));
@@ -94,9 +94,9 @@ public class StorageServiceMBeanMetricFamilyCollector extends MBeanGroupMetricFa
                     .filter(keyspace -> !excludedKeyspaces.contains(keyspace))
                     .flatMap(keyspace -> {
                         try {
-                            return storageServiceMBean.effectiveOwnership(keyspace).entrySet().stream()
+                            return storageServiceMBean.effectiveOwnershipWithPort(keyspace).entrySet().stream()
                                     .map(e -> new Object() {
-                                        final InetAddress endpoint = e.getKey();
+                                        final String endpoint = e.getKey();
                                         final float ownership = e.getValue();
                                     })
                                     .map(e -> {

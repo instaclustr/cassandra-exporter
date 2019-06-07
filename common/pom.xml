@@ -22,6 +22,12 @@
             <groupId>org.apache.cassandra</groupId>
             <artifactId>cassandra-all</artifactId>
             <scope>provided</scope>
+            <exclusions>
+                <exclusion>
+                    <groupId>net.openhft</groupId>
+                    <artifactId>chronicle-core</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
 
         <dependency>

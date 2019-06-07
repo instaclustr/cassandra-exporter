@@ -1,8 +1,8 @@
 package com.zegelin.prometheus.cassandra;
 
-import org.apache.cassandra.config.CFMetaData;
 import org.apache.cassandra.config.DatabaseDescriptor;
-import org.apache.cassandra.config.Schema;
+import org.apache.cassandra.locator.InetAddressAndPort;
+import org.apache.cassandra.schema.Schema;
 import org.apache.cassandra.locator.IEndpointSnitch;
 import org.apache.cassandra.utils.FBUtilities;
 
@@ -11,14 +11,14 @@ import java.util.Optional;
 import java.util.Set;
 
 public class InternalMetadataFactory extends MetadataFactory {
-    private static Optional<CFMetaData> getCFMetaData(final String keyspaceName, final String tableName) {
-        return Optional.ofNullable(Schema.instance.getCFMetaData(keyspaceName, tableName));
+    private static Optional<org.apache.cassandra.schema.TableMetadata> getCFMetaData(final String keyspaceName, final String tableName) {
+        return Optional.ofNullable(Schema.instance.getTableMetadata(keyspaceName, tableName));
     }
 
     @Override
     public Optional<IndexMetadata> indexMetadata(final String keyspaceName, final String tableName, final String indexName) {
         return getCFMetaData(keyspaceName, tableName)
-                .flatMap(m -> m.getIndexes().get(indexName))
+                .flatMap(t -> t.indexes.get(indexName))
                 .map(m -> {
                     final IndexMetadata.IndexType indexType = IndexMetadata.IndexType.valueOf(m.kind.toString());
                     final Optional<String> className = Optional.ofNullable(m.options.get("class_name"));
@@ -59,7 +59,7 @@ public class InternalMetadataFactory extends MetadataFactory {
     }
 
     @Override
-    public Optional<EndpointMetadata> endpointMetadata(final InetAddress endpoint) {
+    public Optional<EndpointMetadata> endpointMetadata(final InetAddressAndPort endpoint) {
         final IEndpointSnitch endpointSnitch = DatabaseDescriptor.getEndpointSnitch();
 
         return Optional.of(new EndpointMetadata() {
@@ -81,7 +81,7 @@ public class InternalMetadataFactory extends MetadataFactory {
     }
 
     @Override
-    public InetAddress localBroadcastAddress() {
-        return FBUtilities.getBroadcastAddress();
+    public InetAddressAndPort localBroadcastAddress() {
+        return FBUtilities.getBroadcastAddressAndPort();
     }
 }

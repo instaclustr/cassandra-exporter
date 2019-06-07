@@ -6,6 +6,7 @@ import com.google.common.escape.Escaper;
 import com.zegelin.netty.Floats;
 import com.zegelin.prometheus.domain.*;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
@@ -470,5 +471,26 @@ public class JsonFormatChunkedInput implements ChunkedInput<ByteBuf> {
         }
 
         return chunkBuffer;
+    }
+
+    @Override
+    public ByteBuf readChunk(final ByteBufAllocator allocator) throws Exception {
+        final ByteBuf chunkBuffer = allocator.buffer(1024 *1024 * 5);
+
+        while (chunkBuffer.readableBytes() < 1024 * 1024 && state != State.EOF) {
+            nextSlice(chunkBuffer);
+        }
+
+        return chunkBuffer;
+    }
+
+    @Override
+    public long length() {
+        return 0; // todo
+    }
+
+    @Override
+    public long progress() {
+        return 0; // todo
     }
 }

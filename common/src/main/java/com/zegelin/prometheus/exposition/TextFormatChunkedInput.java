@@ -367,4 +367,31 @@ public class TextFormatChunkedInput implements ChunkedInput<ByteBuf> {
 
         return chunkBuffer;
     }
+
+    @Override
+    public ByteBuf readChunk(final ByteBufAllocator allocator) throws Exception {
+        final ByteBuf chunkBuffer = allocator.buffer(1024 * 1024 * 5);
+
+        // add slices till we hit the chunk size (or slightly over it), or hit EOF
+        while (chunkBuffer.readableBytes() < 1024 * 1024 && state != State.EOF) {
+            try {
+                nextSlice(chunkBuffer);
+
+            } catch (Exception e) {
+                throw e;
+            }
+        }
+
+        return chunkBuffer;
+    }
+
+    @Override
+    public long length() {
+        return 0;  //todo
+    }
+
+    @Override
+    public long progress() {
+        return 0; //todo
+    }
 }

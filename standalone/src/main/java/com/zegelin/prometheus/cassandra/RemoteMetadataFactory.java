@@ -2,8 +2,8 @@ package com.zegelin.prometheus.cassandra;
 
 import com.datastax.driver.core.*;
 import com.datastax.driver.core.policies.LoadBalancingPolicy;
+import org.apache.cassandra.locator.InetAddressAndPort;
 
-import java.net.InetAddress;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -60,8 +60,9 @@ public class RemoteMetadataFactory extends MetadataFactory {
         return cluster.getMetadata().getKeyspaces().stream().map(KeyspaceMetadata::getName).collect(Collectors.toSet());
     }
 
+    //todo: check this
     @Override
-    public Optional<EndpointMetadata> endpointMetadata(final InetAddress endpoint) {
+    public Optional<EndpointMetadata> endpointMetadata(final InetAddressAndPort endpoint) {
         return cluster.getMetadata().getAllHosts().stream()
                 .filter(h -> h.getBroadcastAddress().equals(endpoint))
                 .findFirst()
@@ -84,7 +85,7 @@ public class RemoteMetadataFactory extends MetadataFactory {
     }
 
     @Override
-    public InetAddress localBroadcastAddress() {
+    public InetAddressAndPort localBroadcastAddress() {
         final LoadBalancingPolicy loadBalancingPolicy = cluster.getConfiguration().getPolicies().getLoadBalancingPolicy();
 
         // if the LoadBalancingPolicy is correctly configured, this should return just the local host
@@ -93,6 +94,7 @@ public class RemoteMetadataFactory extends MetadataFactory {
                 .findFirst()
                 .orElseThrow(() -> new IllegalStateException("No Cassandra node with LOCAL distance found."));
 
-        return host.getBroadcastAddress();
+        //TODO: this might not be right as the driver version hasn't been updated
+        return  InetAddressAndPort.getByAddressOverrideDefaults(host.getBroadcastAddress(), host.getSocketAddress().getPort());
     }
 }

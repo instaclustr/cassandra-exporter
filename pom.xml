@@ -15,7 +15,7 @@
     </modules>
 
     <properties>
-        <version.cassandra.all>3.11.2</version.cassandra.all>
+        <version.cassandra.all>4.0-SNAPSHOT</version.cassandra.all>
 
         <version.maven.release.plugin>2.5.3</version.maven.release.plugin>
         <version.maven.dependency.plugin>3.1.1</version.maven.dependency.plugin>

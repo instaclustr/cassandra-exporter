@@ -5,6 +5,7 @@ import com.zegelin.prometheus.domain.Labels;
 import com.zegelin.prometheus.domain.NumericMetric;
 import org.apache.cassandra.gms.EndpointState;
 import org.apache.cassandra.gms.Gossiper;
+import org.apache.cassandra.locator.InetAddressAndPort;
 
 import java.net.InetAddress;
 import java.util.Map;
@@ -35,11 +36,10 @@ public class InternalGossiperMBeanMetricFamilyCollector extends GossiperMBeanMet
 
     @Override
     protected void collect(final Stream.Builder<NumericMetric> generationNumberMetrics, final Stream.Builder<NumericMetric> downtimeMetrics, final Stream.Builder<NumericMetric> activeMetrics) {
-        final Set<Map.Entry<InetAddress, EndpointState>> endpointStates = gossiper.getEndpointStates();
+        final Set<InetAddressAndPort> endpoints = gossiper.getEndpoints();
 
-        for (final Map.Entry<InetAddress, EndpointState> endpointState : endpointStates) {
-            final InetAddress endpoint = endpointState.getKey();
-            final EndpointState state = endpointState.getValue();
+        for (final InetAddressAndPort endpoint : endpoints) {
+            final EndpointState state = gossiper.getEndpointStateForEndpoint(endpoint); //todo: test if this is actually slower, as we now have to jmx call for each endpoint
 
             final Labels labels = metadataFactory.endpointLabels(endpoint);
 

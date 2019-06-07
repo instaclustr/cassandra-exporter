@@ -6,8 +6,10 @@ import com.google.common.cache.LoadingCache;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.net.InetAddresses;
 import com.zegelin.prometheus.domain.Labels;
+import org.apache.cassandra.locator.InetAddressAndPort;
 
 import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
@@ -37,14 +39,14 @@ public abstract class MetadataFactory {
         String rack();
     }
 
-    private final LoadingCache<InetAddress, Labels> endpointLabelsCache = CacheBuilder.newBuilder()
+    private final LoadingCache<InetAddressAndPort, Labels> endpointLabelsCache = CacheBuilder.newBuilder()
             .expireAfterWrite(1,TimeUnit.MINUTES)
-                .build(new CacheLoader<InetAddress, Labels>() {
+                .build(new CacheLoader<InetAddressAndPort, Labels>() {
         @Override
-        public Labels load(final InetAddress key) {
+        public Labels load(final InetAddressAndPort key) {
             final ImmutableMap.Builder<String, String> labelsBuilder = ImmutableMap.<String, String>builder();
 
-            labelsBuilder.put("endpoint", InetAddresses.toAddrString(key));
+            labelsBuilder.put("endpoint", key.toString());
 
             endpointMetadata(key).ifPresent(metadata -> {
                 labelsBuilder.put("endpoint_datacenter", metadata.dataCenter());
@@ -61,17 +63,23 @@ public abstract class MetadataFactory {
 
     public abstract Set<String> keyspaces();
 
-    public abstract Optional<EndpointMetadata> endpointMetadata(final InetAddress endpoint);
+    public abstract Optional<EndpointMetadata> endpointMetadata(final InetAddressAndPort endpoint);
 
-    public Labels endpointLabels(final InetAddress endpoint) {
+    public Labels endpointLabels(final InetAddressAndPort endpoint) {
         return endpointLabelsCache.getUnchecked(endpoint);
     }
 
+
+    //todo: handle this better
     public Labels endpointLabels(final String endpoint) {
-        return endpointLabels(InetAddresses.forString(endpoint));
+        try {
+            return endpointLabels(InetAddressAndPort.getByName(endpoint));
+        } catch (UnknownHostException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     public abstract String clusterName();
 
-    public abstract InetAddress localBroadcastAddress();
+    public abstract InetAddressAndPort localBroadcastAddress();
 }
