@@ -257,6 +257,30 @@ public class FactoriesSupplier implements Supplier<List<Factory>> {
         }
     }
 
+    private Factory keyspaceMetricFactory(final FactoryBuilder.CollectorConstructor collectorConstructor, final String jmxName, final String familyNameSuffix, final String help) {
+        return keyspaceMetricFactory(collectorConstructor, jmxName, familyNameSuffix, help, ImmutableMap.of());
+    }
+
+    private Factory keyspaceMetricFactory(final FactoryBuilder.CollectorConstructor collectorConstructor, final String jmxName, final String familyNameSuffix, final String help, final Map<String, String> extraLabels) {
+        final ObjectName objectNamePattern = format("org.apache.cassandra.metrics:type=Keyspace,keyspace=*,name=%s", jmxName);
+        final String metricFamilyName = String.format("keyspace_%s", familyNameSuffix);
+
+        return new FactoryBuilder(collectorConstructor, objectNamePattern, metricFamilyName)
+                .withHelp(help)
+                .withModifier((keyPropertyList, labels) -> {
+                    final String keyspaceName = keyPropertyList.get("keyspace");
+
+                    if (excludedKeyspaces.contains(keyspaceName)) {
+                        return false;
+                    }
+
+                    labels.putAll(extraLabels);
+                    labels.put("keyspace", keyspaceName);
+                    return true;
+                })
+                .build();
+    }
+
     private Factory tableMetricFactory(final FactoryBuilder.CollectorConstructor collectorConstructor, final String jmxName, final String familyNameSuffix, final String help) {
         return tableMetricFactory(collectorConstructor, jmxName, familyNameSuffix, help, ImmutableMap.of());
     }
@@ -579,6 +603,58 @@ public class FactoriesSupplier implements Supplier<List<Factory>> {
             builder.add(storageMetric(functionalCollectorConstructor(counterAsCounter()), "TotalHintsInProgress", "hints_in_progress", null));
         }
 
+
+        // org.apache.cassandra.metrics.KeyspaceMetrics
+        {
+            builder.add(keyspaceMetricFactory(functionalCollectorConstructor(numericGaugeAsGauge()), "MemtableOnHeapDataSize", "memory_used_bytes", null, ImmutableMap.of("region", "on_heap", "pool", "memtable")));
+            builder.add(keyspaceMetricFactory(functionalCollectorConstructor(numericGaugeAsGauge()), "MemtableOffHeapDataSize", "memory_used_bytes", null, ImmutableMap.of("region", "off_heap", "pool", "memtable")));
+
+            builder.add(keyspaceMetricFactory(functionalCollectorConstructor(numericGaugeAsGauge()), "MemtableLiveDataSize", "memtable_live_bytes", null));
+
+            builder.add(keyspaceMetricFactory(functionalCollectorConstructor(numericGaugeAsGauge()), "MemtableColumnsCount", "memtable_columns", null));
+            builder.add(keyspaceMetricFactory(functionalCollectorConstructor(numericGaugeAsCounter()), "MemtableSwitchCount", "memtable_switches", null));
+
+            builder.add(keyspaceMetricFactory(LatencyMetricGroupSummaryCollector::collectorForMBean, "ReadLatency", "operation_latency_seconds", null, ImmutableMap.of("operation", "read")));
+            builder.add(keyspaceMetricFactory(LatencyMetricGroupSummaryCollector::collectorForMBean, "ReadTotalLatency", "operation_latency_seconds", null, ImmutableMap.of("operation", "read")));
+
+            builder.add(keyspaceMetricFactory(LatencyMetricGroupSummaryCollector::collectorForMBean, "RangeLatency", "operation_latency_seconds", null, ImmutableMap.of("operation", "range_read")));
+            builder.add(keyspaceMetricFactory(LatencyMetricGroupSummaryCollector::collectorForMBean, "RangeTotalLatency", "operation_latency_seconds", null, ImmutableMap.of("operation", "range_read")));
+
+            builder.add(keyspaceMetricFactory(LatencyMetricGroupSummaryCollector::collectorForMBean, "WriteLatency", "operation_latency_seconds", null, ImmutableMap.of("operation", "write")));
+            builder.add(keyspaceMetricFactory(LatencyMetricGroupSummaryCollector::collectorForMBean, "WriteTotalLatency", "operation_latency_seconds", null, ImmutableMap.of("operation", "write")));
+
+            builder.add(keyspaceMetricFactory(LatencyMetricGroupSummaryCollector::collectorForMBean, "CasPrepareLatency", "operation_latency_seconds", null, ImmutableMap.of("operation", "cas_prepare")));
+            builder.add(keyspaceMetricFactory(LatencyMetricGroupSummaryCollector::collectorForMBean, "CasPrepareTotalLatency", "operation_latency_seconds", null, ImmutableMap.of("operation", "cas_prepare")));
+
+            builder.add(keyspaceMetricFactory(LatencyMetricGroupSummaryCollector::collectorForMBean, "CasCommitLatency", "operation_latency_seconds", null, ImmutableMap.of("operation", "cas_commit")));
+            builder.add(keyspaceMetricFactory(LatencyMetricGroupSummaryCollector::collectorForMBean, "CasCommitTotalLatency", "operation_latency_seconds", null, ImmutableMap.of("operation", "cas_commit")));
+
+            builder.add(keyspaceMetricFactory(LatencyMetricGroupSummaryCollector::collectorForMBean, "CasProposeLatency", "operation_latency_seconds", null, ImmutableMap.of("operation", "cas_propose")));
+            builder.add(keyspaceMetricFactory(LatencyMetricGroupSummaryCollector::collectorForMBean, "CasProposeTotalLatency", "operation_latency_seconds", null, ImmutableMap.of("operation", "cas_propose")));
+
+            builder.add(keyspaceMetricFactory(histogramAsSummaryCollectorConstructor(), "SSTablesPerReadHistogram", "sstables_per_read", null));
+
+            builder.add(keyspaceMetricFactory(functionalCollectorConstructor(numericGaugeAsGauge()), "PendingFlushes", "pending_flushes", null));
+            builder.add(keyspaceMetricFactory(functionalCollectorConstructor(numericGaugeAsGauge()), "PendingCompactions", "pending_compactions", null));
+
+            builder.add(keyspaceMetricFactory(functionalCollectorConstructor(numericGaugeAsGauge()), "LiveDiskSpaceUsed", "live_disk_space_bytes", null));
+            builder.add(keyspaceMetricFactory(functionalCollectorConstructor(numericGaugeAsGauge()), "TotalDiskSpaceUsed", "disk_space_bytes", null));
+
+            builder.add(keyspaceMetricFactory(histogramAsSummaryCollectorConstructor(), "TombstoneScannedHistogram", "tombstones_scanned", null));
+            builder.add(keyspaceMetricFactory(histogramAsSummaryCollectorConstructor(), "LiveScannedHistogram", "live_rows_scanned", null));
+
+            builder.add(keyspaceMetricFactory(histogramAsSummaryCollectorConstructor(), "ColUpdateTimeDeltaHistogram", "column_update_time_delta_seconds", null));
+
+            builder.add(keyspaceMetricFactory(functionalCollectorConstructor(numericGaugeAsGauge()), "BloomFilterDiskSpaceUsed", "bloom_filter_disk_space_used_bytes", null));
+            builder.add(keyspaceMetricFactory(functionalCollectorConstructor(numericGaugeAsGauge()), "BloomFilterOffHeapMemoryUsed", "memory_used_bytes", null, ImmutableMap.of("region", "off_heap", "pool", "bloom_filter")));
+
+            builder.add(keyspaceMetricFactory(functionalCollectorConstructor(numericGaugeAsGauge()), "IndexSummaryOffHeapMemoryUsed", "memory_used_bytes", null, ImmutableMap.of("region", "off_heap", "pool", "index_summary")));
+
+            builder.add(keyspaceMetricFactory(functionalCollectorConstructor(numericGaugeAsGauge()), "CompressionMetadataOffHeapMemoryUsed", "compression_metadata_offheap_bytes", null));
+
+            builder.add(keyspaceMetricFactory(timerAsSummaryCollectorConstructor(), "ViewLockAcquireTime", "view_lock_acquisition_seconds", null));
+            builder.add(keyspaceMetricFactory(timerAsSummaryCollectorConstructor(), "ViewReadTime", "view_read_seconds", null));
+        }
 
         // org.apache.cassandra.metrics.TableMetrics (includes secondary indexes and MVs)
         {
