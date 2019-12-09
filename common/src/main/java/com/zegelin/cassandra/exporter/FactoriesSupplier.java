@@ -62,10 +62,15 @@ public class FactoriesSupplier implements Supplier<List<Factory>> {
 
         FactoryBuilder withLabelMaker(final LabelMaker labelMaker) {
             return this.withModifier((keyPropertyList, labels) -> {
-                labels.putAll(labelMaker.apply(keyPropertyList));
+                Map<String, String> madeLabels = labelMaker.apply(keyPropertyList);
 
-                return true;
-            });
+                if (madeLabels != null) {
+                    labels.putAll(madeLabels);
+                    return true;
+                } else {
+                    return false;
+                }
+           });
         }
 
         FactoryBuilder withHelp(final String help) {
