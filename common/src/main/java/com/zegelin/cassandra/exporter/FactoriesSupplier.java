@@ -407,7 +407,7 @@ public class FactoriesSupplier implements Supplier<List<Factory>> {
         return (name, help, labels, mBean) -> {
             final NamedObject<SamplingCounting> samplingCountingNamedObject = CassandraMetricsUtilities.jmxTimerMBeanAsSamplingCounting(mBean);
 
-            return new FunctionalMetricFamilyCollector<>(name, help, ImmutableMap.of(labels, samplingCountingNamedObject), samplingAndCountingAsSummary(MetricValueConversionFunctions::microsecondsToSeconds));
+            return new FunctionalMetricFamilyCollector<>(name, help, ImmutableMap.of(labels, samplingCountingNamedObject), samplingAndCountingAsSummary(MetricValueConversionFunctions::nanosecondsToSeconds));
         };
     }
 
