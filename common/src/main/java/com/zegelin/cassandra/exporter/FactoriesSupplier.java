@@ -199,7 +199,7 @@ public class FactoriesSupplier implements Supplier<List<Factory>> {
 
                     labels.put("operation", operation);
 
-                    if (consistency == null && (operation.equals("read") || operation.equals("write"))) {
+                    if (consistency == null && operation.equals("read")) {
                         // read/write without a consistency level is a total -- exclude
                         return false;
 
@@ -778,6 +778,7 @@ public class FactoriesSupplier implements Supplier<List<Factory>> {
             builder.addAll(tableMetricFactory(functionalCollectorConstructor(numericGaugeAsGauge(MetricValueConversionFunctions::percentToRatio)), "PercentRepaired", "repaired_ratio", null));
 
             builder.addAll(tableMetricFactory(timerAsSummaryCollectorConstructor(), "CoordinatorReadLatency", "coordinator_latency_seconds", null, ImmutableMap.of("operation", "read")));
+            builder.addAll(tableMetricFactory(timerAsSummaryCollectorConstructor(), "CoordinatorWriteLatency", "coordinator_latency_seconds", null, ImmutableMap.of("operation", "write")));
             builder.addAll(tableMetricFactory(timerAsSummaryCollectorConstructor(), "CoordinatorScanLatency", "coordinator_latency_seconds", null, ImmutableMap.of("operation", "scan")));
 
             builder.addAll(tableMetricFactory(histogramAsSummaryCollectorConstructor(), "WaitingOnFreeMemtableSpace", "free_memtable_latency_seconds", null));
