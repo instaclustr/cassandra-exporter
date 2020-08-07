@@ -13,6 +13,8 @@ import com.zegelin.cassandra.exporter.collector.jvm.*;
 import com.zegelin.prometheus.domain.Labels;
 
 import javax.management.*;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
@@ -177,6 +179,30 @@ public class FactoriesSupplier implements Supplier<List<Factory>> {
         return new FactoryBuilder(collectorConstructor, objectNamePattern, metricFamilyName)
                 .withHelp(help)
                 .build();
+    }
+
+    private Optional<String> getHostname(String ip) {
+        try {
+            return Optional.of(InetAddress.getByName(ip).getHostName());
+        } catch (UnknownHostException e) {
+            return Optional.empty();
+        }
+    }
+
+    private Factory clientStreamingMetricFactory(final FactoryBuilder.CollectorConstructor collectorConstructor, final String jmxName, final String familyNameSuffix, final String help) {
+        final ObjectName objectNamePattern = format("org.apache.cassandra.metrics:type=Streaming,name=%s,scope=*", jmxName);
+        final String metricFamilyName = String.format("stream_%s", familyNameSuffix);
+
+        return new FactoryBuilder(collectorConstructor, objectNamePattern, metricFamilyName)
+                .withHelp(help)
+                .withModifier((keyPropertyList, labels) -> {
+                    final String scope = keyPropertyList.get("scope");
+                    labels.put("partner_endpoint", scope);
+                    getHostname(scope).ifPresent(hostname -> labels.put("partner_hostname", hostname));
+                    return true;
+                })
+                .build();
+
     }
 
     private Factory clientRequestMetricFactory(final FactoryBuilder.CollectorConstructor collectorConstructor, final String jmxName, final String familyNameSuffix, final String help) {
@@ -799,6 +825,12 @@ public class FactoriesSupplier implements Supplier<List<Factory>> {
             builder.add(threadPoolMetric(functionalCollectorConstructor(counterAsGauge()), "CurrentlyBlockedTasks", "blocked_tasks", null));
             builder.add(threadPoolMetric(functionalCollectorConstructor(numericGaugeAsGauge()), "MaxPoolSize", "maximum_tasks", null));
             builder.add(threadPoolMetric(functionalCollectorConstructor(numericGaugeAsGauge()), "MaxTasksQueued", "maximum_tasks_queued", null));
+        }
+
+        // org.apache.cassandra.metrics.Streaming
+        {
+            builder.add(clientStreamingMetricFactory(functionalCollectorConstructor(counterAsCounter()), "IncomingBytes", "incoming_bytes", "Streaming incoming bytes"));
+            builder.add(clientStreamingMetricFactory(functionalCollectorConstructor(counterAsCounter()), "OutgoingBytes", "outgoing_bytes", "Streaming outgoing bytes"));
         }
 
 
