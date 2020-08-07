@@ -1,13 +1,13 @@
 package com.zegelin.prometheus.domain;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.zegelin.function.FloatFloatFunction;
 
+import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
-import java.util.stream.Stream;
-import java.util.stream.StreamSupport;
 
 /*
 A Summary quanitle or Histogram bucket and associated value.
@@ -23,6 +23,14 @@ public final class Interval {
 
         public static final Set<Quantile> STANDARD_PERCENTILES = ImmutableSet.of(P_50, P_75, P_95, P_98, P_99, P_99_9);
         public static final Quantile POSITIVE_INFINITY = q(Float.POSITIVE_INFINITY);
+        public static final Map<String,Quantile> ALL_PERCENTILES = new ImmutableMap.Builder<String,Quantile>()
+                                                                        .put("P_50",P_50)
+                                                                        .put("P_75",P_75)
+                                                                        .put("P_95",P_95)
+                                                                        .put("P_98",P_98)
+                                                                        .put("P_99",P_99)
+                                                                        .put("P_99_9",P_99_9)
+                                                                        .build();
 
         public final float value;
 
