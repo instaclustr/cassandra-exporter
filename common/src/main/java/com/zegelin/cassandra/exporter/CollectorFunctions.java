@@ -10,6 +10,7 @@ import org.apache.cassandra.metrics.CassandraMetricsRegistry.JmxGaugeMBean;
 import org.apache.cassandra.metrics.CassandraMetricsRegistry.JmxMeterMBean;
 import org.apache.cassandra.utils.EstimatedHistogram;
 
+import java.util.ArrayList;
 import java.util.stream.Stream;
 
 public final class CollectorFunctions {
@@ -175,5 +176,59 @@ public final class CollectorFunctions {
 
     public static CollectorFunction<SamplingCounting> samplingAndCountingAsSummary() {
         return samplingAndCountingAsSummary(FloatFloatFunction.identity());
+    }
+
+    /**
+     * Collect a {@link SamplingCounting} as a Prometheus histogram.
+     */
+    protected static CollectorFunction<SamplingCounting> samplingAndCountingAsHistogram(final FloatFloatFunction bucketScaleFunction) {
+        // Set some limits on the range so we don't export all 170 buckets
+        float bucketMin = 0.0001f; // 0.1ms
+        float bucketMax = 60.0f; // 60sec
+
+        // Avoid recomputing the buckets frequently. Cassandra uses ~170 buckets
+        float[] cachedBuckets = newBucketOffsets(200, bucketScaleFunction);
+
+        return group -> {
+            final Stream<HistogramMetricFamily.Histogram> histogramStream = group.labeledObjects().entrySet().stream()
+                    .map(e -> {
+                        long[] values = e.getValue().getValues();
+                        float[] buckets = values.length <= cachedBuckets.length
+                                ? cachedBuckets
+                                : newBucketOffsets(values.length, bucketScaleFunction);
+
+                        float sum = 0;
+                        long count = 0;
+                        ArrayList<Interval> intervals = new ArrayList<>();
+                        assert values[values.length-1] == 0;
+
+                        for (int i = 0; i < values.length; i++) {
+                            if (values[i] != 0) {
+                                sum += buckets[i] * values[i];
+                                count += values[i];
+                            }
+                            if (buckets[i] >= bucketMin && buckets[i] <= bucketMax) {
+                                intervals.add(new Interval(new Interval.Quantile(buckets[i]), count));
+                            }
+                        }
+
+                        return new HistogramMetricFamily.Histogram(e.getKey(), sum, count, intervals);
+                    });
+
+            return Stream.of(new HistogramMetricFamily(group.name(), group.help(), histogramStream));
+        };
+    }
+
+    public static CollectorFunction<SamplingCounting> samplingAndCountingAsHistogram() {
+        return samplingAndCountingAsHistogram(FloatFloatFunction.identity());
+    }
+
+    private static float[] newBucketOffsets(int size, final FloatFloatFunction bucketScaleFunction) {
+        long[] rawOffsets = EstimatedHistogram.newOffsets(size, false);
+        float[] adjustedOffsets = new float[size];
+        for (int i = 0; i < size; i++) {
+            adjustedOffsets[i] = bucketScaleFunction.apply(rawOffsets[i]);
+        }
+        return adjustedOffsets;
     }
 }
