@@ -13,4 +13,6 @@ public interface SamplingCounting {
     long getCount();
 
     Iterable<Interval> getIntervals();
+
+    long[] getValues();
 }

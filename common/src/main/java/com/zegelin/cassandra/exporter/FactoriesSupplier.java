@@ -510,6 +510,15 @@ public class FactoriesSupplier implements Supplier<List<Factory>> {
         };
     }
 
+    private static FactoryBuilder.CollectorConstructor histogramAsHistogramCollectorConstructor() {
+        return (name, help, labels, mBean) -> {
+            final NamedObject<SamplingCounting> samplingCountingNamedObject = CassandraMetricsUtilities.jmxHistogramAsSamplingCounting(mBean);
+
+            return new FunctionalMetricFamilyCollector<>(name, help, ImmutableMap.of(labels, samplingCountingNamedObject),
+                    samplingAndCountingAsHistogram(MetricValueConversionFunctions::nanosecondsToSeconds));
+        };
+    }
+
     private static <T> FactoryBuilder.CollectorConstructor functionalCollectorConstructor(final FunctionalMetricFamilyCollector.CollectorFunction<T> function) {
         return (final String name, final String help, final Labels labels, final NamedObject<?> mBean) ->
                 new FunctionalMetricFamilyCollector<>(name, help, ImmutableMap.of(labels, mBean.<T>cast()), function);
@@ -592,6 +601,8 @@ public class FactoriesSupplier implements Supplier<List<Factory>> {
 
             builder.add(clientRequestMetricFactory(LatencyMetricGroupSummaryCollector::collectorForMBean, "Latency", "latency_seconds", "Request latency."));
             builder.add(clientRequestMetricFactory(LatencyMetricGroupSummaryCollector::collectorForMBean, "TotalLatency", "latency_seconds", "Total request duration."));
+
+            builder.add(clientRequestMetricFactory(histogramAsHistogramCollectorConstructor(), "Latency", "latency_hist_seconds", "Request latency."));
         }
 
 
