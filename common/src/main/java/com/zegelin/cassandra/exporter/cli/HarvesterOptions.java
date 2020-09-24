@@ -152,4 +152,8 @@ public class HarvesterOptions {
 
         excludedKeyspaces.addAll(CASSANDRA_SYSTEM_KEYSPACES);
     }
+
+    @Option(names = "--enable-ip-resolve",
+            description = "Add label with hostname(s) from resolved IP(s)")
+    public boolean resolveIP;
 }

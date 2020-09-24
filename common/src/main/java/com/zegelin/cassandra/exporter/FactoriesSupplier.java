@@ -115,6 +115,7 @@ public class FactoriesSupplier implements Supplier<List<Factory>> {
     private final boolean perThreadTimingEnabled;
     private final Set<TableLabels> tableLabels;
     private final Set<String> excludedKeyspaces;
+    private final boolean resolveIP;
     private final Map<TableMetricScope, TableMetricScope.Filter> tableMetricScopeFilters;
 
 
@@ -123,6 +124,7 @@ public class FactoriesSupplier implements Supplier<List<Factory>> {
         this.perThreadTimingEnabled = options.perThreadTimingEnabled;
         this.tableLabels = options.tableLabels;
         this.excludedKeyspaces = options.excludedKeyspaces;
+        this.resolveIP = options.resolveIP;
 
         this.tableMetricScopeFilters = ImmutableMap.<TableMetricScope, TableMetricScope.Filter>builder()
                 .put(TableMetricScope.NODE, options.nodeMetricsFilter)
@@ -532,7 +534,7 @@ public class FactoriesSupplier implements Supplier<List<Factory>> {
         final ImmutableList.Builder<Factory> builder = ImmutableList.builder();
 
         builder.add(FailureDetectorMBeanMetricFamilyCollector.factory(metadataFactory));
-        builder.add(cache(StorageServiceMBeanMetricFamilyCollector.factory(metadataFactory, excludedKeyspaces), 5, TimeUnit.MINUTES));
+        builder.add(cache(StorageServiceMBeanMetricFamilyCollector.factory(metadataFactory, excludedKeyspaces, resolveIP), 5, TimeUnit.MINUTES));
 
         builder.add(MemoryPoolMXBeanMetricFamilyCollector.FACTORY);
         builder.add(GarbageCollectorMXBeanMetricFamilyCollector.FACTORY);
