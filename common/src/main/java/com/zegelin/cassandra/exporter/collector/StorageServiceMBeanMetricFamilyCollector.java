@@ -2,6 +2,7 @@ package com.zegelin.cassandra.exporter.collector;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.zegelin.cassandra.exporter.Harvester;
 import com.zegelin.cassandra.exporter.MBeanGroupMetricFamilyCollector;
 import com.zegelin.cassandra.exporter.MetadataFactory;
 import com.zegelin.prometheus.domain.GaugeMetricFamily;
@@ -26,13 +27,14 @@ import static com.zegelin.cassandra.exporter.CassandraObjectNames.STORAGE_SERVIC
 
 public class StorageServiceMBeanMetricFamilyCollector extends MBeanGroupMetricFamilyCollector {
     private static final Logger logger = LoggerFactory.getLogger(StorageServiceMBeanMetricFamilyCollector.class);
+    private final Set<Harvester.Exclusion> exclusions;
 
-    public static Factory factory(final MetadataFactory metadataFactory, final Set<String> excludedKeyspaces) {
+    public static Factory factory(final MetadataFactory metadataFactory, final Set<String> excludedKeyspaces, final Set<Harvester.Exclusion> exclusions) {
         return mBean -> {
             if (!STORAGE_SERVICE_MBEAN_NAME.apply(mBean.name))
                 return null;
 
-            return new StorageServiceMBeanMetricFamilyCollector((StorageServiceMBean) mBean.object, metadataFactory, excludedKeyspaces);
+            return new StorageServiceMBeanMetricFamilyCollector((StorageServiceMBean) mBean.object, metadataFactory, excludedKeyspaces, exclusions);
         };
     }
 
@@ -45,10 +47,11 @@ public class StorageServiceMBeanMetricFamilyCollector extends MBeanGroupMetricFa
 
 
     private StorageServiceMBeanMetricFamilyCollector(final StorageServiceMBean storageServiceMBean,
-                                                     final MetadataFactory metadataFactory, final Set<String> excludedKeyspaces) {
+                                                     final MetadataFactory metadataFactory, final Set<String> excludedKeyspaces, final Set<Harvester.Exclusion> exclusions) {
         this.storageServiceMBean = storageServiceMBean;
         this.metadataFactory = metadataFactory;
         this.excludedKeyspaces = excludedKeyspaces;
+        this.exclusions=exclusions;
 
         // determine the set of FileStores (i.e., mountpoints) for the Cassandra data/CL/cache directories
         // (which can be done once -- changing directories requires a server restart)
@@ -144,6 +147,6 @@ public class StorageServiceMBeanMetricFamilyCollector extends MBeanGroupMetricFa
             metricFamilyStreamBuilder.add(new GaugeMetricFamily("cassandra_storage_filesystem_unallocated_bytes", null, fileStoreUnallocatedSpaceMetrics.build()));
         }
 
-        return metricFamilyStreamBuilder.build();
+        return metricFamilyStreamBuilder.build().filter(mf -> exclusions.contains(mf.name));
     }
 }

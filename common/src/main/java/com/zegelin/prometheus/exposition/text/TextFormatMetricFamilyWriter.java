@@ -3,10 +3,12 @@ package com.zegelin.prometheus.exposition.text;
 import com.google.common.escape.CharEscaperBuilder;
 import com.google.common.escape.Escaper;
 import com.zegelin.prometheus.domain.*;
+import com.zegelin.prometheus.domain.Interval.Quantile;
 import com.zegelin.prometheus.exposition.ExpositionSink;
 
 import java.time.Instant;
 import java.util.Iterator;
+import java.util.Set;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -41,14 +43,16 @@ class TextFormatMetricFamilyWriter {
 
     private final Consumer<ExpositionSink<?>> headerWriter;
     private final Function<ExpositionSink<?>, Boolean> metricWriter;
+    private final Set<Quantile> excludedHistoQuantiles;
 
-    TextFormatMetricFamilyWriter(final Instant timestamp, final Labels globalLabels, final boolean includeHelp, final MetricFamily<?> metricFamily) {
+    TextFormatMetricFamilyWriter(final Instant timestamp, final Labels globalLabels, final boolean includeHelp, final MetricFamily<?> metricFamily, final Set<Quantile> excludedHistoQuantiles) {
         this.timestamp = " " + timestamp.toEpochMilli();
         this.globalLabels = globalLabels;
         this.includeHelp = includeHelp;
 
         this.headerWriter = metricFamily.accept(new HeaderVisitor());
         this.metricWriter = metricFamily.accept(new MetricVisitor());
+        this.excludedHistoQuantiles=excludedHistoQuantiles;
     }
 
     class HeaderVisitor implements MetricFamilyVisitor<Consumer<ExpositionSink<?>>> {
@@ -182,7 +186,9 @@ class TextFormatMetricFamilyWriter {
                 writeMetric(buffer, metricFamily, "_count", summary.count, summary.labels);
 
                 summary.quantiles.forEach(interval -> {
-                    writeMetric(buffer, metricFamily, null, interval.value, summary.labels, interval.quantile.asSummaryLabel());
+                   if (!excludedHistoQuantiles.contains(interval.quantile)) {
+                       writeMetric(buffer, metricFamily, null, interval.value, summary.labels, interval.quantile.asSummaryLabel());
+                    }
                 });
             });
         }
@@ -194,7 +200,10 @@ class TextFormatMetricFamilyWriter {
                 writeMetric(buffer, metricFamily, "_count", histogram.count, histogram.labels);
 
                 histogram.buckets.forEach(interval -> {
-                    writeMetric(buffer, metricFamily, "_bucket", interval.value, histogram.labels, interval.quantile.asHistogramLabel());
+                    if (!excludedHistoQuantiles.contains(interval.quantile)) {
+                        writeMetric(buffer, metricFamily, "_bucket", interval.value, histogram.labels, interval.quantile.asHistogramLabel());   
+                    }
+                   
                 });
 
                 writeMetric(buffer, metricFamily, "_bucket", histogram.count, histogram.labels, Interval.Quantile.POSITIVE_INFINITY.asHistogramLabel());
