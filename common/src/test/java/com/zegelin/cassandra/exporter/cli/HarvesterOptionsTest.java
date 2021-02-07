@@ -10,22 +10,22 @@ import java.nio.file.Path;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import static org.testng.Assert.*;
+import static org.assertj.core.api.Assertions.assertThat;
 
 public class HarvesterOptionsTest {
     
-    static Set<String> exclusionStrings = ImmutableSet.of("test_collector", "test:mbean=foo");
-    static Set<Harvester.Exclusion> exclusions = exclusionStrings.stream()
+    private static Set<String> exclusionStrings = ImmutableSet.of("test_collector", "test:mbean=foo");
+    private static Set<Harvester.Exclusion> exclusions = exclusionStrings.stream()
             .map(Harvester.Exclusion::create)
             .collect(Collectors.toSet());
 
-    @org.testng.annotations.Test
+    @Test
     public void testSetExclusions() {
         final HarvesterOptions harvesterOptions = new HarvesterOptions();
 
         harvesterOptions.setExclusions(exclusionStrings);
 
-        assertEquals(harvesterOptions.exclusions, exclusions);
+        assertThat(harvesterOptions.exclusions).isEqualTo(exclusions);
     }
 
     @Test
@@ -38,6 +38,6 @@ public class HarvesterOptionsTest {
 
         harvesterOptions.setExclusions(ImmutableSet.of(String.format("@%s", tempFile)));
 
-        assertEquals(harvesterOptions.exclusions, exclusions);
+        assertThat(harvesterOptions.exclusions).isEqualTo(exclusions);
     }
 }
