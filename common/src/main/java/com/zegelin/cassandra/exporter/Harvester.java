@@ -10,12 +10,14 @@ import com.zegelin.prometheus.domain.CounterMetricFamily;
 import com.zegelin.prometheus.domain.Labels;
 import com.zegelin.prometheus.domain.MetricFamily;
 import com.zegelin.prometheus.domain.NumericMetric;
+import org.apache.cassandra.config.DatabaseDescriptor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.management.MalformedObjectNameException;
 import javax.management.ObjectName;
 import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
@@ -280,17 +282,30 @@ public abstract class Harvester {
     }
 
     public Labels globalLabels() {
-        final InetAddress localBroadcastAddress = metadataFactory.localBroadcastAddress();
-        final MetadataFactory.EndpointMetadata localMetadata = metadataFactory.endpointMetadata(localBroadcastAddress)
-                .orElseThrow(() -> new IllegalStateException("Unable to get metadata about the local node."));
+        try
+        {
+            final InetAddress localBroadcastAddress = DatabaseDescriptor.getBroadcastAddress() == null ?
+                    getInetAddress() : DatabaseDescriptor.getBroadcastAddress();
+            final MetadataFactory.EndpointMetadata localMetadata = metadataFactory.endpointMetadata(localBroadcastAddress)
+                    .orElseThrow(() -> new IllegalStateException("Unable to get metadata about the local node."));
 
-        final ImmutableMap.Builder<String, String> mapBuilder = ImmutableMap.builder();
+            final ImmutableMap.Builder<String, String> mapBuilder = ImmutableMap.builder();
 
-        LabelEnum.addIfEnabled(GlobalLabel.CLUSTER, enabledGlobalLabels, mapBuilder, metadataFactory::clusterName);
-        LabelEnum.addIfEnabled(GlobalLabel.NODE, enabledGlobalLabels, mapBuilder, () -> InetAddresses.toAddrString(localBroadcastAddress));
-        LabelEnum.addIfEnabled(GlobalLabel.DATACENTER, enabledGlobalLabels, mapBuilder, localMetadata::dataCenter);
-        LabelEnum.addIfEnabled(GlobalLabel.RACK, enabledGlobalLabels, mapBuilder, localMetadata::rack);
+            LabelEnum.addIfEnabled(GlobalLabel.CLUSTER, enabledGlobalLabels, mapBuilder, metadataFactory::clusterName);
+            LabelEnum.addIfEnabled(GlobalLabel.NODE, enabledGlobalLabels, mapBuilder, () -> InetAddresses.toAddrString(localBroadcastAddress));
+            LabelEnum.addIfEnabled(GlobalLabel.DATACENTER, enabledGlobalLabels, mapBuilder, localMetadata::dataCenter);
+            LabelEnum.addIfEnabled(GlobalLabel.RACK, enabledGlobalLabels, mapBuilder, localMetadata::rack);
 
-        return new Labels(mapBuilder.build());
+            return new Labels(mapBuilder.build());
+        }
+        catch (UnknownHostException e)
+        {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private InetAddress getInetAddress() throws UnknownHostException
+    {
+        return DatabaseDescriptor.getListenAddress() == null ? InetAddress.getLocalHost() : DatabaseDescriptor.getListenAddress();
     }
 }
