@@ -140,7 +140,8 @@ public class HarvesterOptions {
     public boolean collectorTimingEnabled;
 
 
-    @Option(names = "--exclude-keyspaces")
+    @Option(names = "--exclude-keyspaces",
+            description = "Exclude keyspaces matching the specified regex pattern.")
     public Set<String> excludedKeyspaces = new HashSet<>();
 
     @Option(names = "--exclude-system-tables",

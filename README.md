@@ -160,7 +160,7 @@ The available command line options may be seen by passing `-h`/`--help`:
                                 Record the cumulative time taken to run each collector
                                   and export the results.
           --exclude-keyspaces=<excludedKeyspaces>
-    
+                                Exclude keyspaces matching the specified regex pattern.
       -e, --exclude=EXCLUSION...
                                 Exclude a metric family or MBean from exposition.
                                   EXCLUSION may be the full name of a metric family
