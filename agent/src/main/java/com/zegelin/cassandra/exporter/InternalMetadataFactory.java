@@ -1,11 +1,11 @@
 package com.zegelin.cassandra.exporter;
 
-import com.zegelin.cassandra.exporter.MetadataFactory;
-import org.apache.cassandra.config.CFMetaData;
 import org.apache.cassandra.config.DatabaseDescriptor;
-import org.apache.cassandra.config.Schema;
-import org.apache.cassandra.gms.Gossiper;
+import org.apache.cassandra.schema.Schema;
 import org.apache.cassandra.locator.IEndpointSnitch;
+import org.apache.cassandra.locator.InetAddressAndPort;
+import org.apache.cassandra.schema.TableMetadata;
+import org.apache.cassandra.schema.TableMetadataRef;
 import org.apache.cassandra.utils.FBUtilities;
 
 import java.net.InetAddress;
@@ -13,17 +13,21 @@ import java.util.Optional;
 import java.util.Set;
 
 public class InternalMetadataFactory extends MetadataFactory {
-    private static Optional<CFMetaData> getCFMetaData(final String keyspaceName, final String tableName) {
-        return Optional.ofNullable(Schema.instance.getCFMetaData(keyspaceName, tableName));
+    private static Optional<TableMetadata> getCFMetaData(final String keyspaceName, final String tableName) {
+        return Optional.ofNullable(Schema.instance.getTableMetadata(keyspaceName, tableName));
+    }
+
+    private static Optional<TableMetadataRef> getIndexMetadata(final String keyspaceName, final String indexName) {
+        return Optional.ofNullable(Schema.instance.getIndexTableMetadataRef(keyspaceName, indexName));
     }
 
     @Override
     public Optional<IndexMetadata> indexMetadata(final String keyspaceName, final String tableName, final String indexName) {
-        return getCFMetaData(keyspaceName, tableName)
-                .flatMap(m -> m.getIndexes().get(indexName))
+        return getIndexMetadata(keyspaceName, tableName)
+                .flatMap(m -> m.get().indexName())
                 .map(m -> {
-                    final IndexMetadata.IndexType indexType = IndexMetadata.IndexType.valueOf(m.kind.toString());
-                    final Optional<String> className = Optional.ofNullable(m.options.get("class_name"));
+                    final IndexMetadata.IndexType indexType = IndexMetadata.IndexType.valueOf(m);
+                    final Optional<String> className = Optional.ofNullable(m);
 
                     return new IndexMetadata() {
                         @Override
@@ -40,9 +44,9 @@ public class InternalMetadataFactory extends MetadataFactory {
     }
 
     @Override
-    public Optional<TableMetadata> tableOrViewMetadata(final String keyspaceName, final String tableOrViewName) {
+    public Optional<TableMetadataMetrics> tableOrViewMetadata(final String keyspaceName, final String tableOrViewName) {
         return getCFMetaData(keyspaceName, tableOrViewName)
-                .map(m -> new TableMetadata() {
+                .map(m -> new TableMetadataMetrics() {
                     @Override
                     public String compactionStrategyClassName() {
                         return m.params.compaction.klass().getCanonicalName();
@@ -67,12 +71,12 @@ public class InternalMetadataFactory extends MetadataFactory {
         return Optional.of(new EndpointMetadata() {
             @Override
             public String dataCenter() {
-                return endpointSnitch.getDatacenter(endpoint);
+                return endpointSnitch.getDatacenter(InetAddressAndPort.getByAddress(endpoint));
             }
 
             @Override
             public String rack() {
-                return endpointSnitch.getRack(endpoint);
+                return endpointSnitch.getRack(InetAddressAndPort.getByAddress(endpoint));
             }
         });
     }
@@ -84,6 +88,11 @@ public class InternalMetadataFactory extends MetadataFactory {
 
     @Override
     public InetAddress localBroadcastAddress() {
-        return FBUtilities.getBroadcastAddress();
+        return FBUtilities.getBroadcastAddressAndPort().address;
+    }
+
+    @Override
+    public String localBroadcastAddressString() {
+        return this.localBroadcastAddress().toString().substring(1);
     }
 }

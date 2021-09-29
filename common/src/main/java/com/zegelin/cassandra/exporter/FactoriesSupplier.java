@@ -404,7 +404,7 @@ public class FactoriesSupplier implements Supplier<List<Factory>> {
                                 } else {
                                     labels.put("table", tableName);
 
-                                    final Optional<MetadataFactory.TableMetadata> tableMetadata = metadataFactory.tableOrViewMetadata(keyspaceName, tableName);
+                                    final Optional<MetadataFactory.TableMetadataMetrics> tableMetadata = metadataFactory.tableOrViewMetadata(keyspaceName, tableName);
 
                                     tableMetadata.ifPresent(m -> {
                                         LabelEnum.addIfEnabled(TableLabels.TABLE_TYPE, tableLabels, labels, () -> m.isView() ? "view" : "table");
@@ -470,7 +470,7 @@ public class FactoriesSupplier implements Supplier<List<Factory>> {
                     final HashMap<String, String> labels = new HashMap<>();
 
                     {
-                        final String endpoint = keyPropertyList.get("scope"); // IP address of other node
+                        final String endpoint = keyPropertyList.get("scope").split("_")[0]; // IP address of other node
                         labels.putAll(metadataFactory.endpointLabels(endpoint));
                     }
 

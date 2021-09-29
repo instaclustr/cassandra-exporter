@@ -26,7 +26,7 @@ public abstract class MetadataFactory {
         Optional<String> customClassName();
     }
 
-    interface TableMetadata {
+    interface TableMetadataMetrics {
         String compactionStrategyClassName();
 
         boolean isView();
@@ -57,7 +57,7 @@ public abstract class MetadataFactory {
 
     public abstract Optional<IndexMetadata> indexMetadata(final String keyspaceName, final String tableName, final String indexName);
 
-    public abstract Optional<TableMetadata> tableOrViewMetadata(final String keyspaceName, final String tableOrViewName);
+    public abstract Optional<TableMetadataMetrics> tableOrViewMetadata(final String keyspaceName, final String tableOrViewName);
 
     public abstract Set<String> keyspaces();
 
@@ -74,4 +74,6 @@ public abstract class MetadataFactory {
     public abstract String clusterName();
 
     public abstract InetAddress localBroadcastAddress();
+
+    public abstract String localBroadcastAddressString();
 }

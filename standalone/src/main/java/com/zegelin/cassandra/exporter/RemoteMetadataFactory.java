@@ -2,7 +2,6 @@ package com.zegelin.cassandra.exporter;
 
 import com.datastax.driver.core.*;
 import com.datastax.driver.core.policies.LoadBalancingPolicy;
-import com.zegelin.cassandra.exporter.MetadataFactory;
 
 import java.net.InetAddress;
 import java.util.Optional;
@@ -35,7 +34,7 @@ public class RemoteMetadataFactory extends MetadataFactory {
     }
 
     @Override
-    public Optional<TableMetadata> tableOrViewMetadata(final String keyspaceName, final String tableOrViewName) {
+    public Optional<TableMetadataMetrics> tableOrViewMetadata(final String keyspaceName, final String tableOrViewName) {
         return Optional.ofNullable(cluster.getMetadata().getKeyspace(keyspaceName))
                 .flatMap(k -> {
                     final AbstractTableMetadata tableMetadata = k.getTable(tableOrViewName);
@@ -43,7 +42,7 @@ public class RemoteMetadataFactory extends MetadataFactory {
 
                     return Optional.ofNullable(tableMetadata != null ? tableMetadata : materializedViewMetadata);
                 })
-                .map(m -> new TableMetadata() {
+                .map(m -> new TableMetadataMetrics() {
                     @Override
                     public String compactionStrategyClassName() {
                         return m.getOptions().getCompaction().get("class");
@@ -95,5 +94,10 @@ public class RemoteMetadataFactory extends MetadataFactory {
                 .orElseThrow(() -> new IllegalStateException("No Cassandra node with LOCAL distance found."));
 
         return host.getBroadcastAddress();
+    }
+
+    @Override
+    public String localBroadcastAddressString() {
+        return this.localBroadcastAddress().toString().substring(1);
     }
 }

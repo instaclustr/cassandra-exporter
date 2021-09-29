@@ -287,7 +287,7 @@ public abstract class Harvester {
         final ImmutableMap.Builder<String, String> mapBuilder = ImmutableMap.builder();
 
         LabelEnum.addIfEnabled(GlobalLabel.CLUSTER, enabledGlobalLabels, mapBuilder, metadataFactory::clusterName);
-        LabelEnum.addIfEnabled(GlobalLabel.NODE, enabledGlobalLabels, mapBuilder, () -> InetAddresses.toAddrString(localBroadcastAddress));
+        LabelEnum.addIfEnabled(GlobalLabel.NODE, enabledGlobalLabels, mapBuilder, metadataFactory::localBroadcastAddressString);
         LabelEnum.addIfEnabled(GlobalLabel.DATACENTER, enabledGlobalLabels, mapBuilder, localMetadata::dataCenter);
         LabelEnum.addIfEnabled(GlobalLabel.RACK, enabledGlobalLabels, mapBuilder, localMetadata::rack);
 

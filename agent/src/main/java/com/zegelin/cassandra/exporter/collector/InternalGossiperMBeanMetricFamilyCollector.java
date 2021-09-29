@@ -5,10 +5,9 @@ import com.zegelin.prometheus.domain.Labels;
 import com.zegelin.prometheus.domain.NumericMetric;
 import org.apache.cassandra.gms.EndpointState;
 import org.apache.cassandra.gms.Gossiper;
+import org.apache.cassandra.locator.InetAddressAndPort;
 
 import java.net.InetAddress;
-import java.util.Map;
-import java.util.Set;
 import java.util.stream.Stream;
 
 import static com.zegelin.cassandra.exporter.CassandraObjectNames.GOSSIPER_MBEAN_NAME;
@@ -34,17 +33,17 @@ public class InternalGossiperMBeanMetricFamilyCollector extends GossiperMBeanMet
 
     @Override
     protected void collect(final Stream.Builder<NumericMetric> generationNumberMetrics, final Stream.Builder<NumericMetric> downtimeMetrics, final Stream.Builder<NumericMetric> activeMetrics) {
-        final Set<Map.Entry<InetAddress, EndpointState>> endpointStates = gossiper.getEndpointStates();
 
-        for (final Map.Entry<InetAddress, EndpointState> endpointState : endpointStates) {
-            final InetAddress endpoint = endpointState.getKey();
-            final EndpointState state = endpointState.getValue();
+        for (final InetAddressAndPort endpointState : gossiper.getEndpoints()) {
+            final InetAddress endpoint = endpointState.address;
+            final EndpointState state = gossiper.getEndpointStateForEndpoint(endpointState);
 
             final Labels labels = metadataFactory.endpointLabels(endpoint);
 
-            generationNumberMetrics.add(new NumericMetric(labels, gossiper.getCurrentGenerationNumber(endpoint)));
-            downtimeMetrics.add(new NumericMetric(labels, millisecondsToSeconds(gossiper.getEndpointDowntime(endpoint))));
+            generationNumberMetrics.add(new NumericMetric(labels, gossiper.getCurrentGenerationNumber(endpointState)));
+            downtimeMetrics.add(new NumericMetric(labels, millisecondsToSeconds(gossiper.getEndpointDowntime(endpointState))));
             activeMetrics.add(new NumericMetric(labels, state.isAlive() ? 1 : 0));
         }
+
     }
 }
