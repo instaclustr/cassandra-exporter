@@ -4,6 +4,8 @@
 
 *Project Status: beta*
 
+# Note - The Cassandra-Exporter tool does not support Cassandra 4.0 or newer, see the compatibility section for more details on supported versions.
+
 
 ## Introduction
 
