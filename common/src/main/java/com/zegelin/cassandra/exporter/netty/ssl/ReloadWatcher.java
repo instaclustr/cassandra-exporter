@@ -5,61 +5,66 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.attribute.FileTime;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.Collection;
 import java.util.Objects;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-// TODO: Switch to using java.time.* classes (Instant, Duration, etc) and java.nio.Path
 public class ReloadWatcher {
     private static final Logger logger = LoggerFactory.getLogger(ReloadWatcher.class);
 
-    private static final long RELOAD_MARGIN_MILLIS = 1000;
-    private final long intervalInMs;
-    private final Collection<File> files;
+    private static final Duration RELOAD_MARGIN = Duration.ofMillis(1000);
+    private final Duration reloadInterval;
+    private final Collection<Path> files;
 
-    private long nextReloadAt;
-    private long reloadedAt;
+    private Instant nextReloadAt;
+    private Instant reloadedAt;
 
     public ReloadWatcher(final HttpServerOptions httpServerOptions) {
-        intervalInMs = TimeUnit.SECONDS.toMillis(httpServerOptions.sslReloadIntervalInSeconds);
+        reloadInterval = Duration.ofSeconds(httpServerOptions.sslReloadIntervalInSeconds);
         files = Stream.of(httpServerOptions.sslServerKeyFile,
                 httpServerOptions.sslServerKeyPasswordFile,
                 httpServerOptions.sslServerCertificateFile,
                 httpServerOptions.sslTrustedCertificateFile)
                 .filter(Objects::nonNull)
+                .map(File::toPath)
                 .collect(Collectors.toSet());
 
         logger.info("Watching {} for changes every {} seconds.", this.files, httpServerOptions.sslReloadIntervalInSeconds);
-        reset(System.currentTimeMillis());
+        reset(Instant.now());
     }
 
-    private void reset(final long now) {
-        // Create a 1 second margin to compensate for poor resolution of File.lastModified()
-        reloadedAt = now - RELOAD_MARGIN_MILLIS;
+    private void reset(final Instant now) {
+        // Create a 1 second margin to compensate for poor resolution of Files.getLastModifiedTime()
+        reloadedAt = now.minus(RELOAD_MARGIN);
 
-        nextReloadAt = now + intervalInMs;
+        nextReloadAt = now.plus(reloadInterval);
         logger.debug("Next reload at {}.", nextReloadAt);
     }
 
     public synchronized void forceReload() {
-        if (!enabled()) {
+        if (disabled()) {
             return;
         }
 
         logger.info("Forced reload of exporter certificates on next scrape.");
 
-        reloadedAt = 0L;
-        nextReloadAt = 0L;
+        reloadedAt = Instant.EPOCH;
+        nextReloadAt = Instant.EPOCH;
     }
 
     boolean needReload() {
-        if (!enabled()) {
+        if (disabled()) {
             return false;
         }
 
-        final long now = System.currentTimeMillis();
+        final Instant now = Instant.now();
 
         if (timeToPoll(now)) {
             return reallyNeedReload(now);
@@ -68,15 +73,15 @@ public class ReloadWatcher {
         return false;
     }
 
-    private boolean enabled() {
-        return intervalInMs > 0;
+    private boolean disabled() {
+        return reloadInterval.isZero();
     }
 
-    private boolean timeToPoll(final long now) {
-        return now > nextReloadAt;
+    private boolean timeToPoll(final Instant now) {
+        return now.isAfter(nextReloadAt);
     }
 
-    private synchronized boolean reallyNeedReload(final long now) {
+    private synchronized boolean reallyNeedReload(final Instant now) {
         if (timeToPoll(now)) {
             try {
                 return anyFileModified();
@@ -88,6 +93,19 @@ public class ReloadWatcher {
     }
 
     private boolean anyFileModified() {
-        return files.stream().anyMatch(f -> f.lastModified() > reloadedAt);
+        return files.stream()
+                .map(this::getLastModifiedTimeSafe)
+                .map(FileTime::toMillis)
+                .map(Instant::ofEpochMilli)
+                .anyMatch(lastModifiedAt -> lastModifiedAt.isAfter(reloadedAt));
+    }
+
+    private FileTime getLastModifiedTimeSafe(final Path path) {
+        try {
+            return Files.getLastModifiedTime(path);
+        } catch (IOException e) {
+            logger.warn("Unable to get modification time of file {} - forcing reload.", path, e);
+            return FileTime.from(Instant.MAX);
+        }
     }
 }
