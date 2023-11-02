@@ -1,5 +1,6 @@
 package com.zegelin.prometheus.domain;
 
+import com.codahale.metrics.Snapshot;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.zegelin.function.FloatFloatFunction;
@@ -20,8 +21,12 @@ public final class Interval {
         public static final Quantile P_98 = q(.98f);
         public static final Quantile P_99 = q(.99f);
         public static final Quantile P_99_9 = q(.999f);
+        public static final Quantile MIN = q(0.0f, "min");
+        public static final Quantile MEAN = q(0.0f, "mean");
+        public static final Quantile MAX = q(0.0f, "max");
+        public static final Quantile STDDEV = q(0.0f, "stddev");
 
-        public static final Set<Quantile> STANDARD_PERCENTILES = ImmutableSet.of(P_50, P_75, P_95, P_98, P_99, P_99_9);
+        public static final Set<Quantile> STANDARD_PERCENTILES = ImmutableSet.of(P_50, P_75, P_95, P_98, P_99, P_99_9, MIN, MEAN, MAX, STDDEV);
         public static final Quantile POSITIVE_INFINITY = q(Float.POSITIVE_INFINITY);
 
         public final float value;
@@ -30,15 +35,38 @@ public final class Interval {
         private final Labels summaryLabel, histogramLabel;
 
         public Quantile(final float value) {
+            this(value, Float.toString(value));
+        }
+
+        public Quantile(final float value, final String stringRepr) {
             this.value = value;
 
-            this.stringRepr = Float.toString(value);
+            this.stringRepr = stringRepr;
             this.summaryLabel = Labels.of("quantile", this.stringRepr);
             this.histogramLabel = Labels.of("le", this.stringRepr);
         }
 
         public static Quantile q(final float value) {
             return new Quantile(value);
+        }
+
+        public static Quantile q(final float value, final String stringRepr) {
+            return new Quantile(value, stringRepr);
+        }
+
+        public float decode(Snapshot snapshot) {
+            switch (stringRepr) {
+                case "min":
+                    return (float) snapshot.getMin();
+                case "mean":
+                    return (float) snapshot.getMean();
+                case "max":
+                    return (float) snapshot.getMax();
+                case "stddev":
+                    return (float) snapshot.getStdDev();
+                default:
+                    return (float) snapshot.getValue(value);
+            }
         }
 
         public Labels asSummaryLabel() {
