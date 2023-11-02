@@ -6,7 +6,6 @@ import com.datastax.driver.core.*;
 import com.datastax.driver.core.policies.RoundRobinPolicy;
 import com.datastax.driver.core.policies.WhiteListPolicy;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.zegelin.picocli.InetSocketAddressTypeConverter;
 import com.zegelin.picocli.JMXServiceURLTypeConverter;
 import com.zegelin.cassandra.exporter.cli.HarvesterOptions;
@@ -78,6 +77,9 @@ public class Application implements Callable<Void> {
 
     @Option(names = "--cql-password", paramLabel = "PASSWORD", description = "CQL authentication password.")
     private String cqlPassword;
+    
+    @Option(names = "--cql-ssl", paramLabel = "SSL", description = "Creates enctrypted DB connections.")
+    private boolean ssl;
 
     @Option(names = {"-v", "--verbose"}, description = "Enable verbose logging. Multiple invocations increase the verbosity.")
     boolean[] verbosity = {};
@@ -144,6 +146,9 @@ public class Application implements Callable<Void> {
 
         if (cqlUser != null && cqlPassword != null) {
             clusterBuilder.withCredentials(cqlUser, cqlPassword);
+        }
+        if (ssl) {
+            clusterBuilder.withSSL();
         }
 
         final Cluster cluster = clusterBuilder.build();

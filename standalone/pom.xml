@@ -16,8 +16,7 @@
     <properties>
         <version.guava>18.0</version.guava>
         <version.cassandra.datastax.driver.core>3.4.0</version.cassandra.datastax.driver.core>
-        <version.netty>4.0.47.Final</version.netty>
-
+        <version.netty>4.0.53.Final</version.netty>
         <version.logback.classic>1.2.3</version.logback.classic>
         <version.jul.to.slf4j>1.7.16</version.jul.to.slf4j>
     </properties>

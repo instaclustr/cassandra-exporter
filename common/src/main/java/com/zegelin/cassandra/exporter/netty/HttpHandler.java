@@ -299,7 +299,7 @@ public class HttpHandler extends SimpleChannelInboundHandler<FullHttpRequest> {
                 lastWriteFuture = ctx.writeAndFlush(response);
 
                 if (request.getMethod() == HttpMethod.GET) {
-                    ReadableByteChannel byteChannel = new FormattedByteChannel(new TextFormatExposition(metricFamilyStream, timestamp, globalLabels, includeHelp));
+                    ReadableByteChannel byteChannel = new FormattedByteChannel(new TextFormatExposition(metricFamilyStream, timestamp, globalLabels, includeHelp, harvester.getExcludedHistoQuantiles()));
                     lastWriteFuture = ctx.writeAndFlush(new HttpChunkedInput(new ChunkedNioStream(byteChannel, FormattedByteChannel.MAX_CHUNK_SIZE)));
                 }
 

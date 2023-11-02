@@ -2,6 +2,7 @@ package com.zegelin.cassandra.exporter.cli;
 
 import com.google.common.collect.ImmutableSet;
 import com.zegelin.netty.Floats;
+import com.zegelin.prometheus.domain.Interval.Quantile;
 import com.zegelin.cassandra.exporter.FactoriesSupplier;
 import com.zegelin.cassandra.exporter.Harvester;
 import picocli.CommandLine;
@@ -152,4 +153,27 @@ public class HarvesterOptions {
 
         excludedKeyspaces.addAll(CASSANDRA_SYSTEM_KEYSPACES);
     }
+    
+    public final Set<Quantile> excludedHistoQuantiles = new HashSet<>();
+    @Option(names = {"--exclude-from-histogram"}, paramLabel = "EXCLUSION", arity = "1..*",
+            description = "Select which quantiles to exclude from histogram metrics. The specified quantiles are excluded from all histogram/summary metrics" +
+                    "Valid options are: P_50, P_75, P_95, P_98, P_99, P_99_9" +
+                    "'P_50' (Quantile .5), " +
+                    "'P_75' (Quantile .75), " +
+                    "'P_95' (Quantile .95),  " +
+                    "'P_98' (Quantile .98). " +
+                    "'P_99' (Quantile .99). " +
+                    "'P_99_9' (Quantile .999). " +
+                    "The default is to include all quantiles. "
+            )
+    void setExcludeFromHistogram(final Set<String> values) {
+        values.forEach( e -> {
+            Quantile q = Quantile.ALL_PERCENTILES.get(e);
+            if(q == null) {
+                throw new IllegalArgumentException(String.format("The specified exlusion quantile '%s' is invalid, value values are '%s'", e, Quantile.ALL_PERCENTILES.keySet()));
+            }
+            excludedHistoQuantiles.add(q); 
+        });
+    }
+
 }

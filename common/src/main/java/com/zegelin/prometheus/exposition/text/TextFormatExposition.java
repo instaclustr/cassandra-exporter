@@ -3,12 +3,14 @@ package com.zegelin.prometheus.exposition.text;
 import com.google.common.base.Stopwatch;
 import com.zegelin.netty.Resources;
 import com.zegelin.prometheus.domain.*;
+import com.zegelin.prometheus.domain.Interval.Quantile;
 import com.zegelin.prometheus.exposition.ExpositionSink;
 import com.zegelin.prometheus.exposition.FormattedExposition;
 import io.netty.buffer.ByteBuf;
 
 import java.time.Instant;
 import java.util.Iterator;
+import java.util.Set;
 import java.util.stream.Stream;
 
 public class TextFormatExposition implements FormattedExposition {
@@ -35,13 +37,14 @@ public class TextFormatExposition implements FormattedExposition {
     private int metricCount = 0;
 
     private final Stopwatch stopwatch = Stopwatch.createUnstarted();
-
-
-    public TextFormatExposition(final Stream<MetricFamily> metricFamilies, final Instant timestamp, final Labels globalLabels, final boolean includeHelp) {
+    private final Set<Quantile> excludedHistoQuantiles;
+    
+    public TextFormatExposition(final Stream<MetricFamily> metricFamilies, final Instant timestamp, final Labels globalLabels, final boolean includeHelp, final Set<Quantile> excludedHistoQuantiles) {
         this.metricFamiliesIterator = metricFamilies.iterator();
         this.timestamp = timestamp;
         this.globalLabels = globalLabels;
         this.includeHelp = includeHelp;
+        this.excludedHistoQuantiles = excludedHistoQuantiles;
     }
 
     @Override
@@ -70,7 +73,7 @@ public class TextFormatExposition implements FormattedExposition {
 
                 final MetricFamily<?> metricFamily = metricFamiliesIterator.next();
 
-                metricFamilyWriter = new TextFormatMetricFamilyWriter(timestamp, globalLabels, includeHelp, metricFamily);
+                metricFamilyWriter = new TextFormatMetricFamilyWriter(timestamp, globalLabels, includeHelp, metricFamily, excludedHistoQuantiles);
 
                 metricFamilyWriter.writeFamilyHeader(chunkBuffer);
 

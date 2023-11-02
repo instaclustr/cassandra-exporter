@@ -7,6 +7,7 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.zegelin.jmx.NamedObject;
 import com.zegelin.cassandra.exporter.cli.HarvesterOptions;
 import com.zegelin.prometheus.domain.CounterMetricFamily;
+import com.zegelin.prometheus.domain.Interval.Quantile;
 import com.zegelin.prometheus.domain.Labels;
 import com.zegelin.prometheus.domain.MetricFamily;
 import com.zegelin.prometheus.domain.NumericMetric;
@@ -56,6 +57,8 @@ public abstract class Harvester {
         @Override
         public abstract boolean equals(final Object obj);
 
+        public abstract String getName();
+
         public static Exclusion create(final String value) {
             try {
                 return new MBeanExclusion(ObjectName.getInstance(value));
@@ -91,6 +94,10 @@ public abstract class Harvester {
             final MBeanExclusion that = (MBeanExclusion) o;
             return Objects.equals(objectNameOrPattern, that.objectNameOrPattern);
         }
+
+        public String getName() {
+            return objectNameOrPattern.toString();
+        }
     }
 
     private static class CollectorExclusion extends Exclusion {
@@ -117,6 +124,10 @@ public abstract class Harvester {
             final CollectorExclusion that = (CollectorExclusion) o;
             return Objects.equals(collectorName, that.collectorName);
         }
+
+        public String getName() {
+            return collectorName;
+        }
     }
 
     private final List<MBeanGroupMetricFamilyCollector.Factory> collectorFactories;
@@ -132,6 +143,7 @@ public abstract class Harvester {
 
     private final boolean collectorTimingEnabled;
     private final Map<String, Stopwatch> collectionTimes = new ConcurrentHashMap<>();
+    private final Set<Quantile> excludedHistoQuantiles;
 
     private final ScheduledExecutorService scheduledExecutorService = Executors.newSingleThreadScheduledExecutor(new ThreadFactoryBuilder()
             .setNameFormat("cassandra-exporter-harvester-defer-%d")
@@ -145,6 +157,11 @@ public abstract class Harvester {
         this.exclusions = options.exclusions;
         this.enabledGlobalLabels = options.globalLabels;
         this.collectorTimingEnabled = options.collectorTimingEnabled;
+        this.excludedHistoQuantiles = options.excludedHistoQuantiles;
+    }
+
+    public Set<Quantile> getExcludedHistoQuantiles() {
+        return excludedHistoQuantiles;
     }
 
     protected void addCollectorFactory(final MBeanGroupMetricFamilyCollector.Factory factory) {
