@@ -1,6 +1,5 @@
 package com.zegelin.cassandra.exporter;
 
-import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import com.zegelin.cassandra.exporter.cli.HarvesterOptions;
 import com.zegelin.cassandra.exporter.collector.RemoteGossiperMBeanMetricFamilyCollector;
@@ -12,6 +11,7 @@ import java.util.Set;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 
 public class JMXHarvester extends Harvester {
@@ -41,8 +41,7 @@ public class JMXHarvester extends Harvester {
 
             // unregister
             {
-                final Set<ObjectInstance> removedMBeans = Sets.difference(currentMBeans, newMBeans);
-
+                final Set<ObjectInstance> removedMBeans = currentMBeans.stream().filter(cmb -> !newMBeans.contains(cmb)).collect(Collectors.toSet());
                 logger.debug("Removing {} old MBeans.", removedMBeans.size());
 
                 for (final ObjectInstance instance : removedMBeans) {
@@ -53,8 +52,7 @@ public class JMXHarvester extends Harvester {
 
             // register
             {
-                final Set<ObjectInstance> addedMBeans = Sets.difference(newMBeans, currentMBeans);
-
+                final Set<ObjectInstance> addedMBeans = newMBeans.stream().filter(nmb -> !currentMBeans.contains(nmb)).collect(Collectors.toSet());
                 logger.debug("Found {} new MBeans.", addedMBeans.size());
 
                 for (final ObjectInstance instance : addedMBeans) {
