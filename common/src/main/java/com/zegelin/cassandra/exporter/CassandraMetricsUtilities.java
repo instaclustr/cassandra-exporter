@@ -87,6 +87,11 @@ public class CassandraMetricsUtilities {
                         new Interval(Interval.Quantile.P_99_9, (float) timer.get999thPercentile() * durationFactor)
                 );
             }
+
+            @Override
+            public long[] getValues() {
+                return timer.values();
+            }
         };
     }
 
@@ -108,6 +113,11 @@ public class CassandraMetricsUtilities {
                         new Interval(Interval.Quantile.P_99_9, (float) histogram.get999thPercentile())
                 );
             }
+
+            @Override
+            public long[] getValues() {
+                return histogram.values();
+            }
         };
     }
 
@@ -124,6 +134,11 @@ public class CassandraMetricsUtilities {
                 final Snapshot snapshot = metric.getSnapshot();
 
                 return Interval.asIntervals(Interval.Quantile.STANDARD_PERCENTILES, q -> (float) snapshot.getValue(q.value));
+            }
+
+            @Override
+            public long[] getValues() {
+                return metric.getSnapshot().getValues();
             }
         };
     }
