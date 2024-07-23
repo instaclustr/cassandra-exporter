@@ -93,7 +93,7 @@ public class StorageServiceMBeanMetricFamilyCollector extends MBeanGroupMetricFa
 
         {
             final Stream<NumericMetric> ownershipMetricStream = metadataFactory.keyspaces().stream()
-                    .filter(keyspace -> !excludedKeyspaces.contains(keyspace))
+                    .filter(keyspace -> !excludedKeyspaces.stream().anyMatch(p -> keyspace.matches(p)))
                     .flatMap(keyspace -> {
                         try {
                             return storageServiceMBean.effectiveOwnership(keyspace).entrySet().stream()

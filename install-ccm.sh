@@ -1,5 +1,9 @@
 #!/usr/bin/env bash
 
+HERE="$(dirname "$(readlink -f "$0")")"
+
+AGENT="$HERE/agent/target/cassandra-exporter-agent-0.9.11-SNAPSHOT.jar"
+
 find . -path '*/node*/conf/cassandra-env.sh' | while read file; do
     echo "Processing $file"
 
@@ -7,6 +11,8 @@ find . -path '*/node*/conf/cassandra-env.sh' | while read file; do
 
     sed -i -e "/cassandra-exporter/d" "${file}"
 
-    echo "JVM_OPTS=\"\$JVM_OPTS -javaagent:/home/adam/Projects/cassandra-exporter/agent/target/cassandra-exporter-agent-0.9.4-SNAPSHOT.jar=--listen=:${port},--cache=true,--enable-collector-timing\"" >> \
-        "${file}"
+    cat <<EOF >> "${file}"
+JVM_OPTS="\$JVM_OPTS -javaagent:$AGENT=--listen=:${port},--enable-collector-timing"
+EOF
+
 done;

@@ -370,7 +370,7 @@ public class FactoriesSupplier implements Supplier<List<Factory>> {
 
                                 final String keyspaceName = keyPropertyList.get("keyspace");
 
-                                if (excludedKeyspaces.contains(keyspaceName)) {
+                                if (excludedKeyspaces.stream().anyMatch(p -> keyspaceName.matches(p))) {
                                     return false;
                                 }
 
