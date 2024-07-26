@@ -14,7 +14,7 @@
     <name>Cassandra Exporter Common</name>
 
     <properties>
-        <version.picocli>3.6.1</version.picocli>
+        <version.picocli>3.9.5</version.picocli>
     </properties>
 
     <dependencies>
