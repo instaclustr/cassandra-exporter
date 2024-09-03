@@ -131,6 +131,8 @@ public abstract class Harvester {
     private final Set<GlobalLabel> enabledGlobalLabels;
 
     private final boolean collectorTimingEnabled;
+    private final boolean resolveIP;
+
     private final Map<String, Stopwatch> collectionTimes = new ConcurrentHashMap<>();
 
     private final ScheduledExecutorService scheduledExecutorService = Executors.newSingleThreadScheduledExecutor(new ThreadFactoryBuilder()
@@ -145,6 +147,7 @@ public abstract class Harvester {
         this.exclusions = options.exclusions;
         this.enabledGlobalLabels = options.globalLabels;
         this.collectorTimingEnabled = options.collectorTimingEnabled;
+        this.resolveIP = options.resolveIP;
     }
 
     protected void addCollectorFactory(final MBeanGroupMetricFamilyCollector.Factory factory) {
