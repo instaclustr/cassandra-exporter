@@ -141,6 +141,10 @@ public abstract class Harvester {
 
     protected Harvester(final MetadataFactory metadataFactory, final HarvesterOptions options) {
         this.collectorFactories = new ArrayList<>(new FactoriesSupplier(metadataFactory, options).get());
+
+        ServiceLoader<FactoriesProvider> providers = ServiceLoader.load(FactoriesProvider.class);
+        providers.forEach(p -> collectorFactories.addAll(p.getFactories(metadataFactory, options)));
+
         this.metadataFactory = metadataFactory;
         this.exclusions = options.exclusions;
         this.enabledGlobalLabels = options.globalLabels;

@@ -37,7 +37,8 @@ public abstract class MBeanGroupMetricFamilyCollector {
     public abstract Stream<MetricFamily> collect();
 
 
-    protected interface Factory {
+    public interface Factory
+    {
         /**
          * Create a {@link MBeanGroupMetricFamilyCollector} for the given MBean, or null if this collector
          * doesn't support the given MBean.
