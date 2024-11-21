@@ -85,7 +85,7 @@ public class SslContextFactory {
     }
 
     private SslContextBuilder getSelfSignedContextBuilder() {
-        logger.warn("Running exporter in SSL mode with insecure self-signed certificate");
+        logger.warn("Running exporter in SSL mode with insecure self-signed certificate.");
 
         try {
             final SelfSignedCertificate ssc = new SelfSignedCertificate();

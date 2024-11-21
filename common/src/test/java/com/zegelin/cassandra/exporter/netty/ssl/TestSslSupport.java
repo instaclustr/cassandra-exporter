@@ -15,8 +15,12 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
 import java.io.File;
+import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.attribute.FileTime;
+import java.time.Instant;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -105,7 +109,7 @@ public class TestSslSupport {
 
 
     @Test
-    public void testSslReload() throws InterruptedException {
+    public void testSslReload() throws Exception {
         serverOptions.sslMode = SslMode.ENABLE;
         serverOptions.sslServerKeyFile = givenResource("cert/key.pem");
         serverOptions.sslServerCertificateFile = givenResource("cert/cert.pem");
@@ -116,7 +120,7 @@ public class TestSslSupport {
         SslContext unexpectedContext = sslSupport.getSslContext();
 
         Thread.sleep(1001);
-        serverOptions.sslServerKeyFile.setLastModified(System.currentTimeMillis());
+        touch(serverOptions.sslServerKeyFile);
 
         sslSupport.maybeAddHandler(socketChannel);
 
@@ -124,7 +128,7 @@ public class TestSslSupport {
     }
 
     @Test
-    public void testSslNoReloadOnFailure() throws InterruptedException {
+    public void testSslNoReloadOnFailure() throws Exception {
         serverOptions.sslMode = SslMode.ENABLE;
         serverOptions.sslServerKeyFile = givenResource("cert/key.pem");
         serverOptions.sslServerCertificateFile = givenResource("cert/cert.pem");
@@ -135,7 +139,7 @@ public class TestSslSupport {
         SslContext expectedContext = sslSupport.getSslContext();
 
         Thread.sleep(1001);
-        serverOptions.sslServerKeyFile.setLastModified(System.currentTimeMillis());
+        touch(serverOptions.sslServerKeyFile);
         serverOptions.sslServerCertificateFile = null;
 
         sslSupport.maybeAddHandler(socketChannel);
@@ -144,7 +148,7 @@ public class TestSslSupport {
     }
 
     @Test
-    public void testSslReloadDisabled() throws InterruptedException {
+    public void testSslReloadDisabled() throws Exception {
         serverOptions.sslMode = SslMode.ENABLE;
         serverOptions.sslServerKeyFile = givenResource("cert/key.pem");
         serverOptions.sslServerCertificateFile = givenResource("cert/cert.pem");
@@ -154,7 +158,7 @@ public class TestSslSupport {
         SslContext expectedContext = sslSupport.getSslContext();
 
         Thread.sleep(1001);
-        serverOptions.sslServerKeyFile.setLastModified(System.currentTimeMillis());
+        touch(serverOptions.sslServerKeyFile);
 
         sslSupport.maybeAddHandler(socketChannel);
 
@@ -164,5 +168,9 @@ public class TestSslSupport {
     private File givenResource(String resource) {
         URL url = this.getClass().getResource("/" + resource);
         return new File(url.getFile());
+    }
+
+    private void touch(File file) throws IOException {
+        Files.setLastModifiedTime(file.toPath(), FileTime.from(Instant.now()));
     }
 }

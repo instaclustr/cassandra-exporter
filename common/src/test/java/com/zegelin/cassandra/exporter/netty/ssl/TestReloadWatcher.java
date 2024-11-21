@@ -7,11 +7,14 @@ import org.testng.annotations.Test;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.attribute.FileTime;
+import java.time.Instant;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 public class TestReloadWatcher {
-    public static final long INITIAL_FILE_AGE_MILLIS = 5000;
+    public static final FileTime INITIAL_FILE_MODIFICATION_TIME = FileTime.from(Instant.now().minusSeconds(5));
     public static final long SLEEP_MILLIS = 1001;
 
     private HttpServerOptions options;
@@ -26,16 +29,16 @@ public class TestReloadWatcher {
         options.sslServerCertificateFile = givenTemporaryFile("server-cert");
         options.sslTrustedCertificateFile = givenTemporaryFile("trusted-cert");
 
-        options.sslServerKeyFile.setLastModified(System.currentTimeMillis() - INITIAL_FILE_AGE_MILLIS);
-        options.sslServerCertificateFile.setLastModified(System.currentTimeMillis() - INITIAL_FILE_AGE_MILLIS);
-        options.sslTrustedCertificateFile.setLastModified(System.currentTimeMillis() - INITIAL_FILE_AGE_MILLIS);
+        Files.setLastModifiedTime(options.sslServerKeyFile.toPath(), INITIAL_FILE_MODIFICATION_TIME);
+        Files.setLastModifiedTime(options.sslServerCertificateFile.toPath(), INITIAL_FILE_MODIFICATION_TIME);
+        Files.setLastModifiedTime(options.sslTrustedCertificateFile.toPath(), INITIAL_FILE_MODIFICATION_TIME);
 
         watcher = new ReloadWatcher(options);
     }
 
     @Test
-    public void testNoImmediateReload() {
-        options.sslServerKeyFile.setLastModified(System.currentTimeMillis());
+    public void testNoImmediateReload() throws IOException {
+        touch(options.sslServerKeyFile);
 
         assertThat(watcher.needReload()).isFalse();
     }
@@ -48,11 +51,11 @@ public class TestReloadWatcher {
     }
 
     @Test
-    public void testReloadOnceWhenFilesAreTouched() throws InterruptedException {
+    public void testReloadOnceWhenFilesAreTouched() throws Exception {
         Thread.sleep(SLEEP_MILLIS);
 
-        options.sslServerKeyFile.setLastModified(System.currentTimeMillis());
-        options.sslServerCertificateFile.setLastModified(System.currentTimeMillis());
+        touch(options.sslServerKeyFile);
+        touch(options.sslServerCertificateFile);
 
         Thread.sleep(SLEEP_MILLIS);
 
@@ -63,15 +66,16 @@ public class TestReloadWatcher {
         assertThat(watcher.needReload()).isFalse();
     }
 
-    // Verify that we reload certificates on next pass again in case files are modified
+    // Verify that we compensate for poor time resolution of Files.getLastModifiedTime().
+    // In other words, make sure that we reload certificates on next pass again in case files are modified
     // just as we check for reload.
     @Test
-    public void testReloadAgainWhenFilesAreTouchedJustAfterReload() throws InterruptedException {
+    public void testReloadAgainWhenFilesAreTouchedJustAfterReload() throws Exception {
         Thread.sleep(SLEEP_MILLIS);
 
-        options.sslServerKeyFile.setLastModified(System.currentTimeMillis());
+        touch(options.sslServerKeyFile);
         assertThat(watcher.needReload()).isTrue();
-        options.sslServerCertificateFile.setLastModified(System.currentTimeMillis());
+        touch(options.sslServerCertificateFile);
 
         Thread.sleep(SLEEP_MILLIS);
 
@@ -88,20 +92,24 @@ public class TestReloadWatcher {
     }
 
     @Test
-    public void testNoReloadWhenDisabled() throws InterruptedException {
+    public void testNoReloadWhenDisabled() throws Exception {
         options.sslReloadIntervalInSeconds = 0;
         watcher = new ReloadWatcher(options);
 
         Thread.sleep(SLEEP_MILLIS);
-        options.sslServerKeyFile.setLastModified(System.currentTimeMillis());
+        touch(options.sslServerKeyFile);
 
         assertThat(watcher.needReload()).isFalse();
     }
 
     private File givenTemporaryFile(String filename) throws IOException {
-        File file = File.createTempFile(filename, "tmp");
-        Files.write(file.toPath(), "dummy".getBytes());
+        Path file = Files.createTempFile(filename, "tmp");
+        Files.write(file, "dummy".getBytes());
 
-        return file;
+        return file.toFile();
+    }
+
+    private void touch(File file) throws IOException {
+        Files.setLastModifiedTime(file.toPath(), FileTime.from(Instant.now()));
     }
 }
