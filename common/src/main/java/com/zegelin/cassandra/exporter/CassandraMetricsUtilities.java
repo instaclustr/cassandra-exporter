@@ -105,7 +105,11 @@ public class CassandraMetricsUtilities {
                         new Interval(Interval.Quantile.P_95, (float) histogram.get95thPercentile()),
                         new Interval(Interval.Quantile.P_98, (float) histogram.get98thPercentile()),
                         new Interval(Interval.Quantile.P_99, (float) histogram.get99thPercentile()),
-                        new Interval(Interval.Quantile.P_99_9, (float) histogram.get999thPercentile())
+                        new Interval(Interval.Quantile.P_99_9, (float) histogram.get999thPercentile()),
+                        new Interval(Interval.Quantile.MIN, (float) histogram.getMin()),
+                        new Interval(Interval.Quantile.MEAN, (float) histogram.getMean()),
+                        new Interval(Interval.Quantile.MAX, (float) histogram.getMax()),
+                        new Interval(Interval.Quantile.STDDEV, (float) histogram.getStdDev())
                 );
             }
         };
@@ -123,7 +127,7 @@ public class CassandraMetricsUtilities {
             public Iterable<Interval> getIntervals() {
                 final Snapshot snapshot = metric.getSnapshot();
 
-                return Interval.asIntervals(Interval.Quantile.STANDARD_PERCENTILES, q -> (float) snapshot.getValue(q.value));
+                return Interval.asIntervals(Interval.Quantile.STANDARD_PERCENTILES, q -> q.decode(snapshot));
             }
         };
     }
