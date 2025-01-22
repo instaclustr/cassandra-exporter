@@ -676,7 +676,7 @@ public class FactoriesSupplier implements Supplier<List<Factory>> {
             builder.add(storageMetric(functionalCollectorConstructor(counterAsCounter()), "Exceptions", "exceptions_total", null));
             builder.add(storageMetric(functionalCollectorConstructor(counterAsGauge()), "Load", "load_bytes", null));
             builder.add(storageMetric(functionalCollectorConstructor(counterAsCounter()), "TotalHints", "hints_total", null));
-            builder.add(storageMetric(functionalCollectorConstructor(counterAsCounter()), "TotalHintsInProgress", "hints_in_progress", null));
+            builder.add(storageMetric(functionalCollectorConstructor(counterAsGauge()), "TotalHintsInProgress", "hints_in_progress", null));
         }
 
 
