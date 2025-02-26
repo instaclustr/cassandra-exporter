@@ -470,8 +470,8 @@ public class FactoriesSupplier implements Supplier<List<Factory>> {
                     final HashMap<String, String> labels = new HashMap<>();
 
                     {
-                        final String endpoint = keyPropertyList.get("scope"); // IP address of other node
-                        labels.putAll(metadataFactory.endpointLabels(endpoint));
+                        final String endpointAndPort = keyPropertyList.get("scope"); // IP address of other node
+                        labels.putAll(metadataFactory.endpointLabels(endpointAndPort.split("_")[0]));
                     }
 
                     labels.computeIfAbsent("task_type", k -> {
